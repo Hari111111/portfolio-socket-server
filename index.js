@@ -82,10 +82,34 @@ const emitGroupStatus = () => {
     }
 };
 
+const emitActiveUsers = () => {
+    const activeUsers = [];
+    const seenIds = new Set();
+    
+    for (const client of io.sockets.sockets.values()) {
+        if (client.data.userId && !seenIds.has(client.data.userId)) {
+            activeUsers.push(client.data.userId);
+            seenIds.add(client.data.userId);
+        }
+    }
+    
+    io.emit('update-user-list', activeUsers);
+};
+
 // Socket handling
 io.on('connection', (socket) => {
     console.log(`User connected: ${socket.id}`);
     socket.data.chatMode = null;
+    socket.data.userId = socket.handshake.query.userId || null;
+
+    if (socket.data.userId) {
+        emitActiveUsers();
+    }
+
+    socket.on('set-user-id', (userId) => {
+        socket.data.userId = userId;
+        emitActiveUsers();
+    });
 
     socket.on('join-group', (callback) => {
         removeSocketFromRooms(socket);
@@ -231,6 +255,7 @@ io.on('connection', (socket) => {
         if (wasInGroup) {
             emitGroupStatus();
         }
+        emitActiveUsers();
         console.log(`User disconnected: ${socket.id}`);
     });
 });
