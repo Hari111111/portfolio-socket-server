@@ -31,6 +31,7 @@ const io = new Server(server, {
         methods: ['GET', 'POST'],
         credentials: true,
     },
+    maxHttpBufferSize: 2e7, // 20MB
 });
 
 const roomMembers = new Map();
@@ -212,6 +213,7 @@ io.on('connection', (socket) => {
                 return;
             }
 
+            console.log(`Broadcasting group message from ${socket.data.userId || socket.id}`);
             for (const client of io.sockets.sockets.values()) {
                 if (client.data.chatMode === GROUP_MODE) {
                     client.emit('receive-message', {
@@ -242,6 +244,7 @@ io.on('connection', (socket) => {
             return;
         }
 
+        console.log(`Broadcasting private message in room ${normalizedRoomId} from ${socket.data.userId || socket.id}`);
         io.to(normalizedRoomId).emit('receive-message', {
             ...data,
             mode: PRIVATE_MODE,
